@@ -29,7 +29,7 @@ def ifft(field):
     return a 1xN numpy array'''
     return fftshift(np.fft.ifft(ifftshift(field)))
 
-def peak_range_finder(field):
+def peak_range_finder(field,threshold=1e-15):
     '''Determines range of indices over which the field has an intensity 
     higher than a set threshold value (1x10^-15 * the maximum intensity). 
     
@@ -38,7 +38,7 @@ def peak_range_finder(field):
     return a 1xN numpy array containing the indices of the thresholded intensity '''
     
     intensity  = abs(field)**2
-    min_intensity = 1e-15*np.amax(intensity)
+    min_intensity = threshold*np.amax(intensity)
     intensity_range_indices = np.where(intensity >= min_intensity)
 
     return intensity_range_indices
@@ -68,10 +68,14 @@ def make_filter(field, intensity_range, type_of_filt = 'Hanning'):
         region_filt[breakpnt:int(window_length/2)] = region_2
         region_3 = np.flip(region_filt[0:int(window_length/2)])
         region_filt[int(window_length/2):int(window_length/2)+len(region_filt[0:int(window_length/2)])] = region_3
-
+        
+    
     space_on_right = num_pts - intensity_range[0][-1]
     space_on_left = intensity_range[0][0] -1 
 
+    if (space_on_left<0): #added by Jack because value was negative and caused issues with np.pad
+        space_on_left=0
+        
     final_filt = np.pad(region_filt, (space_on_left,space_on_right), 'constant')
     return final_filt
 
@@ -217,11 +221,11 @@ class SSNL:
                           [-self.tay12*u.ps**2,self.tay13*u.ps**3,0,0], 
                           [self.tay12*u.ps**2,-self.tay13*u.ps**3,0,0],
                           [0,0,0,0]
-                          ])
+                          ]) #edit (i dont think the change i made is right) made a fix to location of zero in vector, place at beginning since we are setting SOD and TOD
 
     ##Crystal System variables 
         self.crys     = 'BBO'
-        self.length   = 2*u.mm #0.5 mm
+        self.length   = .5*u.mm#2*u.mm #0.5 mm
         self.theta    = 23.29 # for BBO
         self.mixType  = 'SFG'
            
@@ -385,7 +389,7 @@ class SSNL:
     
     
     
-    def genFields(self):
+    def genFields(self,threshold=1e-15):
         '''Creates the field variables and allocates memory. This is based on all
         the attributes input and generated before hand.
         
@@ -411,10 +415,12 @@ class SSNL:
                 
                 #import peaks from dazzler 
                 Input_eField_td =self.input_eField
+                #plt.plot(np.abs(Input_eField_td)**2)
+                #plt.show()
                 Input_eField_fd= fft(Input_eField_td) #will shift to a central frequency if input is oscillatory
 
-                #make filter: hann or rectangular 
-                peak_intensity_range= peak_range_finder(Input_eField_fd)
+                #make filter: hann or rectangular or tukey
+                peak_intensity_range= peak_range_finder(Input_eField_fd,threshold=threshold)
                 filter = make_filter(Input_eField_fd, peak_intensity_range, 'Tukey')
                 #apply filter
                 Input_eField_fd *= filter

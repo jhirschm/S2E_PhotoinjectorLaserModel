@@ -7,11 +7,11 @@ Created on Sat Sep  4 12:00:15 2021
 """
 
 import FinalDazzlerClass
-import FinalCompletetheMeshDataObject
+#import FinalCompleteMeshDataObject
 
 #main functionalities: make pulse, shape pulse, make FROG spectrogram
 #initialize class with two parameters describing central wavelength and pulsewidth, 3 parameters describing hole, 4 parameters for phase shaping
-trial = Dazzler_Pulse_Shaper(1030e-9,330e-15,1030e-9,4e-9,1,0,0e-26,0,0)
+trial = FinalDazzlerClass.Dazzler_Pulse_Shaper(1030e-9,330e-15,1030e-9,4e-9,1,0,0e-26,0,0)
 #create input pulse in time domain: optional arguments amplitude, sampling rate, and time vector
 time_vector, EofT = trial.make_gaussian_pulse()
 #shape pulse: only requires Dazzler class initialization and the 2 arguments that are outputs of make_gaussian_pulse
@@ -36,7 +36,7 @@ set saved waveform
 '''
 #to set saved waveform, you must first set its parameters using "set_saved_waveform", then also weight it in the "shape_input_pulse" function.
 #here we create an initial waveform with delay and hole, then a 2nd waveform with greater delay.
-separate_trial=Dazzler_Pulse_Shaper(1030e-9,330e-15,1030e-9,4e-9,1,2e-12,0,0,0)
+separate_trial=FinalDazzlerClass.Dazzler_Pulse_Shaper(1030e-9,330e-15,1030e-9,4e-9,1,2e-12,0,0,0)
 time_vector_s, EofT_s = separate_trial.make_gaussian_pulse()
 separate_trial.set_saved_waveform(1030e-9,330e-15,1030e-9,4e-9,0,6e-12,0,0,0)
 E_field_input_s, E_field_input_ft_s, E_field_output_s, E_field_output_ft_s,time_vector_s, freq_vector_s, components_dict_s = separate_trial.shape_input_pulse(EofT_s, time_vector_s, phi_saved=.5, a_saved=1)

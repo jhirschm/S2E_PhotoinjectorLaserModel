@@ -29,7 +29,6 @@ input_eField2 = pickle.loads(eField)
 input_eField = {'time_vector':input_eField2['time_vector'], 'E_field': input_eField2['E_field']/abs(max(input_eField2['E_field'])), 'frequency_vector':input_eField2['frequency_vector'], 'central_frequency': 299792458/(1030e-9) }#299792458/(input_eField2['central_wavelength'])} #frequency_vector']}
 
 
-
 #call modified version of SFG code 
 u = pyssnl.UNITS()
 ssnl_Obj = pyssnl.SSNL(input_eField) #ssnl_amy.SSNL(input_pk, spec_phase_1, spec_phase_2) ,1.05*-0.1,-0.5*2.2 

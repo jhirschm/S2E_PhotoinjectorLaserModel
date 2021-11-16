@@ -51,7 +51,8 @@ class Dazzler_Pulse_Shaper():
         self.del_omega0 = self.omega0*(self.chi0-self.chi0**3)
         self.omega1 = 2*np.pi*self.c/self.hole_position
         self.chi1 = self.hole_width/(2*self.hole_position)
-        self.del_omega1 = self.omega1*(self.chi1-self.chi1**3)/2     
+        self.del_omega1 = self.omega1*(self.chi1-self.chi1**3)/2    
+    
     
     def make_gaussian_pulse(self, amplitude = 1,sampling_rate=None, time_vector=np.array([False])):
         #use position and width to make gaussian input pulse
@@ -207,6 +208,8 @@ class Dazzler_Pulse_Shaper():
         
         
         return E_field_input, E_field_input_ft, E_field_output, E_field_output_ft,time_vector, freq_vector, components_dict
+    
+    
     
 
     def calculate_spectrum_phase(self, field):
