@@ -4,6 +4,8 @@ import sympy as sp
 import scipy.interpolate
 import matplotlib.pyplot as plt
 from numpy.fft import fftshift, ifftshift
+from scipy.interpolate import interp1d
+
 
 #Necessary functions to be used in SSNL class
 
@@ -17,6 +19,7 @@ def fft(field):
     
     return a 1xN numpy array'''
     return fftshift(np.fft.fft(ifftshift(field)))
+    #return fftshift(np.fft.fft((field)))
 
 def ifft(field):
     '''ifft with shift
@@ -28,6 +31,8 @@ def ifft(field):
         
     return a 1xN numpy array'''
     return fftshift(np.fft.ifft(ifftshift(field)))
+    #return (np.fft.ifft((ifftshift(field))))
+
 
 def peak_range_finder(field,threshold=1e-15):
     '''Determines range of indices over which the field has an intensity 
@@ -107,6 +112,16 @@ def rotate_peak_indices(np_array, desired_pk_indx, freq_vec, central_freq):
 
     return new_np_array 
 
+def rotate_peak_indices2(array): 
+    '''Rotates peak so that it can be centered at f or t = 0 following a
+    fourier transformation. This is acheived when desired_pk_indx = mid_pt_indx    
+    np_array: 1xN numpy array with a local maximum 
+    desired_pk_indx: integer index
+    
+    return a 1xN numpy array rotated to place the peak at desired_pk_indx'''
+    
+    ind = np.argmax(array)
+    return np.roll(array, array.shape[0]//2-ind)
 
 def interpolate_Efield(efield_fd, freq_vector_old,freq_vector_new):
     '''Interpolates Efield from the dazzler-set sampling rate and vector length defined 
@@ -124,6 +139,8 @@ def interpolate_Efield(efield_fd, freq_vector_old,freq_vector_new):
      there will be odd gaussian shaped growths on the exp(i phase) graph. To check this, plot exp(i (interpolated phase)) against frequency
     
     '''
+    
+    '''
     phase_fd = np.unwrap(np.angle(efield_fd), discont = 50)
     exp_phase_fd = np.exp(1j*phase_fd)
     #interpolate amplitude
@@ -137,7 +154,34 @@ def interpolate_Efield(efield_fd, freq_vector_old,freq_vector_new):
     imag_exp_phase_fd_new = scipy.interpolate.griddata(freq_vector_old,imag_exp_phase_fd,freq_vector_new, method = 'linear')
     exp_phase_fd_new = real_exp_phase_fd_new  + (1j*imag_exp_phase_fd_new)
     efield_new = amplitude_new*exp_phase_fd_new
+    '''
+    real = np.real(efield_fd)
+    imag = np.imag(efield_fd)
+    real_new = scipy.interpolate.griddata(freq_vector_old,real,freq_vector_new, method = 'linear')
+    imag_new = scipy.interpolate.griddata(freq_vector_old,imag,freq_vector_new, method = 'linear')
+    efield_new = real_new+1j*imag_new
+    
+    
+    '''
+    amp = np.abs(efield_fd)
+    phase = np.arctan2(np.imag(efield_fd), np.real(efield_fd))
+    amp_new = scipy.interpolate.griddata(freq_vector_old,amp,freq_vector_old, method = 'linear')
+    phase_new = scipy.interpolate.griddata(freq_vector_old,phase,freq_vector_old, method = 'linear')
+    efield_new = amp_new*np.exp(-1j*phase_new)
+    '''
+
+    
+    
     return efield_new
+
+def resample_method1(input_domain, target_domain, input_vector):
+        try:
+            f = interp1d(input_domain, input_vector)
+            resampled_vector = f(target_domain)
+            return resampled_vector
+        except ValueError:
+            print("Likely the target wavelenth vector is outside the bounds of the input vector (only interpolation\n")
+
 
 class UNITS:
     
@@ -228,6 +272,9 @@ class SSNL:
         self.length   = .5*u.mm#2*u.mm #0.5 mm
         self.theta    = 23.29 # for BBO
         self.mixType  = 'SFG'
+        #maybe make overwriting these more explicit
+        self.energies = np.array([25*u.uJ,25*u.uJ,0*u.uJ])
+        self.spotRad  = 400*u.um
            
         return    
 
@@ -409,32 +456,36 @@ class SSNL:
             
         self.eField  = {'time':timeField, 'freq':freqField}
         
+        #import peaks from dazzler 
+        Input_eField_td =self.input_eField
+        #plt.plot(np.abs(Input_eField_td)**2)
+        #plt.show()
+        Input_eField_fd= fft(Input_eField_td) #will shift to a central frequency if input is oscillatory
+
+        #make filter: hann or rectangular or tukey
+        peak_intensity_range= peak_range_finder(Input_eField_fd,threshold=threshold)
+        filter = make_filter(Input_eField_fd, peak_intensity_range, 'Tukey')
+        #apply filter
+        Input_eField_fd *= filter
+
+        #center peak
+        center_indx = int(np.round(len(self.input_freq_vector)/2))            
+        Input_eField_fd = rotate_peak_indices2(Input_eField_fd)
+        #plt.plot(np.abs(Input_eField_fd)**2)
+        #plt.show()
+
+        #interpolate - effectively downsampling in the time domain
+        freq_vector_old = self.input_freq_vector #input frequency vector
+        freq_vector_new = self.lists['dOmega']/(2*np.pi) #new generated frequency vector
+
+        
         for ii in range(nFields):
             
             if ii != nFields-1:
                 
-                #import peaks from dazzler 
-                Input_eField_td =self.input_eField
-                #plt.plot(np.abs(Input_eField_td)**2)
-                #plt.show()
-                Input_eField_fd= fft(Input_eField_td) #will shift to a central frequency if input is oscillatory
-
-                #make filter: hann or rectangular or tukey
-                peak_intensity_range= peak_range_finder(Input_eField_fd,threshold=threshold)
-                filter = make_filter(Input_eField_fd, peak_intensity_range, 'Tukey')
-                #apply filter
-                Input_eField_fd *= filter
-
-                #center peak
-                center_indx = int(np.round(len(self.input_freq_vector)/2))            
-                Input_eField_fd = rotate_peak_indices(Input_eField_fd, center_indx, self.input_freq_vector, self.input_central_freq)
-
-                #interpolate - effectively downsampling in the time domain
-                freq_vector_old = self.input_freq_vector #input frequency vector
-                freq_vector_new = self.lists['dOmega']/(2*np.pi) #new generated frequency vector
-                #DRASTIC CHANGE: 1) number of elements changed 2) sampling of signal changed 3) window size changed
-                self.eField['freq'][ii+1][0,:] = interpolate_Efield(Input_eField_fd, freq_vector_old, freq_vector_new)
-
+                 #DRASTIC CHANGE: 1) number of elements changed 2) sampling of signal changed 3) window size changed
+                #self.eField['freq'][ii+1][0,:] = interpolate_Efield(Input_eField_fd, freq_vector_old, freq_vector_new)
+                self.eField['freq'][ii+1][0,:] = resample_method1(freq_vector_old, freq_vector_new, Input_eField_fd)
                 #stretch or compress
                 self.eField['freq'][ii+1][0,:] *=  (
                 np.exp( 1j * self.eqns['phase'](self.specPhases[ii,0],
@@ -448,8 +499,10 @@ class SSNL:
                 )
                 
                 self.eField['time'][ii+1][0,:] = ifft(self.eField['freq'][ii+1][0,:])
-                
+                self.eField['time'][ii+1][0,:] = self.energy_adjust(self.eField['time'][ii+1][0,:],self.energies[ii])
+                self.eField['freq'][ii+1][0,:] = fft(self.eField['time'][ii+1][0,:])
             elif ii == nFields-1:
+                #can probably be removed or modified to have starting profile
             
                 self.eField['time'][ii+1][0,:] = np.zeros(len(self.lists['t']))                    
                
@@ -475,32 +528,27 @@ class SSNL:
         rk1 = np.zeros((nFields,N),dtype=complex)
         rk2 = np.zeros((nFields,N),dtype=complex)
         rk3 = np.zeros((nFields,N),dtype=complex)
-        x =1
         for ii in range(nFields):
             rk0[ii,:] = self.grids['dz'] * self.eqns['nonLin'][ii](
                 self.eField['time'][fieldMap[ii,0]][zStep,:],
                 self.eField['time'][fieldMap[ii,1]][zStep,:]
                 )
-        x = 1    
         for ii in range(nFields):
             
             rk1[ii,:] = self.grids['dz'] * self.eqns['nonLin'][ii](
                 self.eField['time'][fieldMap[ii,0]][zStep,:] + rk0[fieldMap[ii,0]-1,:]/2,
                 self.eField['time'][fieldMap[ii,1]][zStep,:] + rk0[fieldMap[ii,1]-1,:]/2
                 )
-        x = 1    
         for ii in range(nFields):
             rk2[ii,:] = self.grids['dz'] * self.eqns['nonLin'][ii](
                 self.eField['time'][fieldMap[ii,0]][zStep,:] + rk1[fieldMap[ii,0]-1,:]/2,
                 self.eField['time'][fieldMap[ii,1]][zStep,:] + rk1[fieldMap[ii,1]-1,:]/2
                 )
-        x = 1   
         for ii in range(nFields):
             rk3[ii,:] = self.grids['dz'] * self.eqns['nonLin'][ii](
                 self.eField['time'][fieldMap[ii,0]][zStep,:] + rk2[fieldMap[ii,0]-1,:],
                 self.eField['time'][fieldMap[ii,1]][zStep,:] + rk2[fieldMap[ii,1]-1,:]
                 )
-        x = 1
         for ii in range(nFields):
             self.eField['time'][ii+1][zStep,:] = (
                 self.eField['time'][ii+1][zStep,:] +
@@ -535,11 +583,11 @@ class SSNL:
                     self.eField['freq'][iF+1][iZ-1,:] *
                     np.exp(1j * self.lists['k'][iF,:] * dzStep(self,iZ))
                     )
-            x = 1   
+                
             if iZ <= self.grids['nZ']-1:
                 
                 self.RKstep(iZ)
-            x = 1  
+                
             for iF in range(nFields):
                 self.eField['freq'][iF+1][iZ,:] = fft(
                     self.eField['time'][iF+1][iZ,:]
@@ -573,3 +621,9 @@ class SSNL:
 
         with open(pickle_filename, 'wb') as handle:
             pickle.dump(Output, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            
+    def energy_adjust(self, e_field, energy):
+        normE = np.sum(np.abs(e_field)**2) * self.grids['dt']  * self.spotRad * np.sqrt(np.pi/2)
+        e_field=np.sqrt(2*energy/normE)*e_field
+        return e_field
+

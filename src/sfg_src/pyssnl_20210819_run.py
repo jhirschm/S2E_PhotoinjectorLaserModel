@@ -21,15 +21,19 @@ import pyssnl_20210819 as pyssnl
 # HigherLambdaAmpShaping_medHoleDepth (1)
 # HigherLambdaAmpShaping_maxHoleDepth (1)
 # 4thPhaseShaping_maxConstant
-with open('OutputforAmy_SamplingRate240_NoShapeGaussian_7Keys.txt', 'rb') as handle:
-    eField= handle.read()
-input_eField2 = pickle.loads(eField)
-
+#with open('OutputforAmy_SamplingRate240_NoShapeGaussian_7Keys.txt', 'rb') ashandle:
+    #eField= handle.read()
+#input_eField2 = pickle.loads(eField)
+time_vector = np.linspace(-8.191e-11,8.192e-11,num=16384)
+freq_vector = np.fft.fftfreq(n=time_vector.shape[0], d = (time_vector[1]-time_vector[0]))
 #input_eField = {'time_vector':input_eField2['time_vector'], 'E_field': input_eField2['E_field']/abs(max(input_eField2['E_field'])), 'frequency_vector':input_eField2['ang_freq_vector']/(2*np.pi), 'central_frequency': 299792458/(1030e-9)} #frequency_vector']}
-input_eField = {'time_vector':input_eField2['time_vector'], 'E_field': input_eField2['E_field']/abs(max(input_eField2['E_field'])), 'frequency_vector':input_eField2['frequency_vector'], 'central_frequency': 299792458/(1030e-9) }#299792458/(input_eField2['central_wavelength'])} #frequency_vector']}
 
-
+input_eField3 = np.sqrt(4.7*10**15)*np.exp(-1.386*(time_vector/(246*10**(-15)))**2)*np.exp(1j*1.8395e15*time_vector)
+plt.plot(time_vector, np.abs(input_eField3)**2)
+plt.show()
 #call modified version of SFG code 
+input_eField = {'time_vector':time_vector, 'E_field': input_eField3/abs(max(input_eField3)), 'frequency_vector':freq_vector, 'central_frequency': 299792458/(1024e-9) }#299792458/(input_eField2['central_wavelength'])} #frequency_vector']}
+input_eField2 =input_eField
 u = pyssnl.UNITS()
 ssnl_Obj = pyssnl.SSNL(input_eField) #ssnl_amy.SSNL(input_pk, spec_phase_1, spec_phase_2) ,1.05*-0.1,-0.5*2.2 
 ssnl_Obj.set_default() #the last two inputs are for the 2nd and 3rd order spectral phases 

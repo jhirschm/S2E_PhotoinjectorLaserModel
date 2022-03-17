@@ -6,7 +6,7 @@ Created on Mon Sep 27 15:08:34 2021
 @author: jackhirschman
 """
 
-#from scipy.integrate import quad
+from scipy.integrate import quad
 from numpy import genfromtxt
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,7 +26,7 @@ sys.path.append('/Users/jackhirschman/Documents/Stanford/PhD_Project/S2E_Photoin
 sys.path.append('/Users/jackhirschman/Documents/Stanford/PhD_Project/S2E_PhotoinjectorLaserModel/src/sfg_src/')
 
 import DazzlerClass
-import RA_CarbideConsulted as RA
+import RA_Notch
 import sympy as sp
 import pickle as pickle
 import pyssnl_20210819 as pyssnl
@@ -68,73 +68,28 @@ def main():
     #1.1 import YbKGW data and set up grids
     #YbKGW
     number_of_sample_points = 14000 #14000
-    wavelength_vec, abs_YbKGW, em_YbKGW  = RA.import_spectra_data_csv('/Users/jackhirschman/Documents/Stanford/PhD_Project/S2E_PhotoinjectorLaserModel/Data/abs_em_YbKGW.csv')
-    wavelength_vec_abs_b, abs_YbKGW_b = RA.import_spectra_data_single_csv('/Users/jackhirschman/Documents/Stanford/PhD_Project/S2E_PhotoinjectorLaserModel/Data/abs_b5.csv')
-    wavelength_vec_abs_c, abs_YbKGW_c = RA.import_spectra_data_single_csv('/Users/jackhirschman/Documents/Stanford/PhD_Project/S2E_PhotoinjectorLaserModel/Data/abs_c5.csv')
-    wavelength_vec_em_b, em_YbKGW_b = RA.import_spectra_data_single_csv('/Users/jackhirschman/Documents/Stanford/PhD_Project/S2E_PhotoinjectorLaserModel/Data/em_b5.csv')
-    wavelength_vec_em_c, em_YbKGW_c = RA.import_spectra_data_single_csv('/Users/jackhirschman/Documents/Stanford/PhD_Project/S2E_PhotoinjectorLaserModel/Data/em_c6.csv')
+    wavelength_vec, abs_YbKGW, em_YbKGW  = RA_Notch.import_spectra_data_csv('../Data/abs_em_YbKGW.csv')
     wavelength_pump = np.linspace(978e-9, 982e-9, num = 20, endpoint=True)
     wavelength_seed = np.linspace(1010e-9, 1047e-9, num = number_of_sample_points, endpoint=True)
 
-    wavelength_vec_abs_b = wavelength_vec_abs_b*1e-9
-    wavelength_vec_abs_c = wavelength_vec_abs_c*1e-9
-    wavelength_vec_em_b = wavelength_vec_em_b*1e-9
-    wavelength_vec_em_c = wavelength_vec_em_c*1e-9
-    abs_YbKGW_b = abs_YbKGW_b*1e-20
-    abs_YbKGW_c = abs_YbKGW_c*1e-20
-    em_YbKGW_b = em_YbKGW_b*1e-20
-    em_YbKGW_c = em_YbKGW_c*1e-20
-
-    if (wavelength_vec_abs_b[-1]<1048e-9):
-        wavelength_vec_abs_b = np.append(wavelength_vec_abs_b,[1048e-9])
-        abs_YbKGW_b = np.append(abs_YbKGW_b,[abs_YbKGW_b[-1]*1e-1])
-    if (wavelength_vec_abs_c[-1]<1048e-9):
-        wavelength_vec_abs_c = np.append(wavelength_vec_abs_c,[1048e-9])
-        abs_YbKGW_c = np.append(abs_YbKGW_c,[abs_YbKGW_c[-1]*1e-1])
-    if (wavelength_vec_em_b[-1]<1048e-9):
-        wavelength_vec_em_b = np.append(wavelength_vec_em_b,[1048e-9])
-        em_YbKGW_b = np.append(em_YbKGW_b,[em_YbKGW_b[-1]*1e-1])
-
-    if (wavelength_vec_em_c[-1]<1048e-9):
-        wavelength_vec_em_c = np.append(wavelength_vec_em_c,[1048e-9])
-        em_YbKGW_c = np.append(em_YbKGW_c,[em_YbKGW_c[-1]*1e-1])
-
-
-
     #Interpolate at selected frequencies
-    sigmas_seed = np.zeros((wavelength_seed.shape[0],7))
+    sigmas_seed = np.zeros((wavelength_seed.shape[0],3))
     sigmas_seed[:,0] = wavelength_seed
     f = interp1d(wavelength_vec, abs_YbKGW)
     sigmas_seed[:,2] = f(wavelength_seed)*1e-4 #for conversion from cm^2 to m^2
     g = interp1d(wavelength_vec, em_YbKGW)
     sigmas_seed[:,1] = g(wavelength_seed)*1e-4 #for conversion from cm^2 to m^2
-    h = interp1d(wavelength_vec_abs_b, abs_YbKGW_b)
-    sigmas_seed[:,4] = h(wavelength_seed)*1e-4 #for conversion from cm^2 to m^2
-    i = interp1d(wavelength_vec_em_b, em_YbKGW_b)
-    sigmas_seed[:,3] = i(wavelength_seed)*1e-4 #for conversion from cm^2 to m^2
-    j = interp1d(wavelength_vec_abs_c, abs_YbKGW_c)
-    sigmas_seed[:,6] = j(wavelength_seed)*1e-4 #for conversion from cm^2 to m^2
-    k = interp1d(wavelength_vec_em_c, em_YbKGW_c)
-    sigmas_seed[:,5] = k(wavelength_seed)*1e-4 #for conversion from cm^2 to m^2
 
-    sigmas_pump = np.zeros((wavelength_pump.shape[0],7))
+    sigmas_pump = np.zeros((wavelength_pump.shape[0],3))
     sigmas_pump[:,0] = wavelength_pump
     f = interp1d(wavelength_vec, abs_YbKGW)
     sigmas_pump[:,2] = f(wavelength_pump)*1e-4 #for conversion from cm^2 to m^2
     g = interp1d(wavelength_vec, em_YbKGW)
     sigmas_pump[:,1] = g(wavelength_pump)*1e-4 #for conversion from cm^2 to m^2
-    h = interp1d(wavelength_vec_abs_b, abs_YbKGW_b)
-    sigmas_pump[:,4] = h(wavelength_pump)*1e-4 #for conversion from cm^2 to m^2
-    i = interp1d(wavelength_vec_em_b, em_YbKGW_b)
-    sigmas_pump[:,3] = i(wavelength_pump)*1e-4 #for conversion from cm^2 to m^2
-    j = interp1d(wavelength_vec_abs_c, abs_YbKGW_c)
-    sigmas_pump[:,6] = j(wavelength_pump)*1e-4 #for conversion from cm^2 to m^2
-    k = interp1d(wavelength_vec_em_c, em_YbKGW_c)
-    sigmas_pump[:,5] = k(wavelength_pump)*1e-4 #for conversion from cm^2 to m^2
 
 
     #Resample Flint Spectrum to use as input
-    flintData = RA.import_spectra_oscillator_data_csv("/Users/jackhirschman/Documents/Stanford/PhD_Project/S2E_PhotoinjectorLaserModel/Data/flintSpectrum05142021.csv", skip_header = 6)
+    flintData = RA_Notch.import_spectra_oscillator_data_csv("../Data/flintSpectrum05142021.csv", skip_header = 6)
 
     flint_resampled = np.zeros(sigmas_seed.shape)
     flint_resampled[:,0] = wavelength_seed
@@ -146,15 +101,14 @@ def main():
 
     #1.2  Set Dazzler parameters
     ind = np.argmax(flintData_normalized[:,1])
-    ind = np.argmax(flintData_normalized[:,1])
     central_wavelength = flintData_normalized[ind,0]
     width = 93.854716e-15
     hole_position = 1022e-9#1024.8e-9
     hole_width = 8e-9
-    hole_depth = 0#.9#.54
-    delay = 0#5e-12
-    second_order = 5*(1e-15)**2#1*(1e-12)**2#0#1e-26
-    third_order = 0.28*(1e-12)**3#1e-39
+    hole_depth = 0
+    delay = 0
+    second_order = 0
+    third_order = 0
     fourth_order = 0
     trial = DazzlerClass.Dazzler_Pulse_Shaper(central_wavelength,width,hole_position,hole_width,hole_depth,delay,second_order,third_order,fourth_order)
     time_vector, EofT = trial.make_gaussian_pulse()
@@ -163,14 +117,37 @@ def main():
     wavelength, intensity, phase = trial.convert_to_wavelength(np.abs(E_field_output_ft)**2, np.unwrap(-1*np.arctan2(np.imag(E_field_output_ft), np.real(E_field_output_ft))),freq_vector,[1010e-9,1047e-9])
     wavelength_r, intensity_r, phase_r = trial.convert_to_wavelength(np.abs(E_field_output_ft)**2, np.unwrap(-1*np.arctan2(np.imag(E_field_output_ft), np.real(E_field_output_ft))),freq_vector)
 
+
+    #1.2  Set Dazzler parameters
+    ind = np.argmax(flintData_normalized[:,1])
+    central_wavelength = flintData_normalized[ind,0]
+    width = 93.854716e-15
+    hole_position = 1022e-9#1024.8e-9
+    hole_width = 8e-9
+    hole_depth = .54
+    delay = 5e-12
+    second_order = 1e-26
+    third_order = 1e-39
+    fourth_order = 0
+    trial = DazzlerClass.Dazzler_Pulse_Shaper(central_wavelength,width,hole_position,hole_width,hole_depth,delay,second_order,third_order,fourth_order)
+    time_vector, EofT = trial.make_gaussian_pulse()
+    E_field_input2, E_field_input_ft2, E_field_output2, E_field_output_ft2,time_vector2, freq_vector2, components_dict2 = trial.shape_input_pulse(EofT, time_vector)
+
+    wavelength2, intensity2, phase2 = trial.convert_to_wavelength(np.abs(E_field_output_ft2)**2, np.unwrap(-1*np.arctan2(np.imag(E_field_output_ft2), np.real(E_field_output_ft2))),freq_vector2,[1010e-9,1047e-9])
+    wavelength_r2, intensity_r2, phase_r2 = trial.convert_to_wavelength(np.abs(E_field_output_ft2)**2, np.unwrap(-1*np.arctan2(np.imag(E_field_output_ft2), np.real(E_field_output_ft2))),freq_vector2)
+
     plt.figure()
-    plt.plot(wavelength_r[6300:7500]*1e9,intensity_r[6300:7500],marker='o')
+    plt.plot(time_vector2*1e12,np.abs(E_field_input2)**2)
+    plt.plot(time_vector2*1e12,np.abs(E_field_output2)**2)
+    plt.xlabel("time (ps)")
     plt.show()
+    #plt.plot(wavelength_r[6300:7500]*1e9,intensity_r[6300:7500],marker='o')
+    #plt.show()
 
     #1.3 set regen parameters
     parameters_YbKGW = {}
     parameters_YbKGW["tau_gain"] = 0.6e-3 #0.6ms
-    parameters_YbKGW["pump_power"] = 120#40 # W
+    parameters_YbKGW["pump_power"] = 2560#40 # W
     parameters_YbKGW["pump_time"] = 1e-3 #1ms
     parameters_YbKGW["radius_laser_and_pump_mode"] = .4e-3#.5e-4 #0.5mm
     parameters_YbKGW["pump_fluence"] = parameters_YbKGW["pump_power"]*parameters_YbKGW["pump_time"]/(np.pi*parameters_YbKGW["radius_laser_and_pump_mode"]**2)
@@ -179,8 +156,8 @@ def main():
     parameters_YbKGW["lambda_0_pump"] = 981.2e-9
     #parameters_YbKGW["length_crystal"] = 6e-3#14e-3 # 9mm
     #parameters_YbKGW["N_gain_ion_density"] = 1.44e26 #1.44 e28 is 7.25 g/cm^3 to atoms/m^3 for Yb but adjusted by two orders of mag since also like that for HoYLF #2.53e22#2.53e28 # m^3 ()
-    parameters_YbKGW["length_crystal"] = np.sqrt(6.86951515e23)
-    parameters_YbKGW["N_gain_ion_density"] = np.sqrt(6.86951515e23)
+    parameters_YbKGW["length_crystal"] = 1.04761575e-3
+    parameters_YbKGW["N_gain_ion_density"] = 1.66810054e27
     parameters_YbKGW["h"] = 6.62606957e-34 #Ws
     parameters_YbKGW["c"] = 3e8 #m/s
 
@@ -191,14 +168,12 @@ def main():
     parameters_YbKGW["delta_lambda_pump"] = parameters_YbKGW["sigmas_pump"][2,0]-parameters_YbKGW["sigmas_pump"][1,0]
     parameters_YbKGW["norm_spectral_amplitude_pump"] = 1/(np.sqrt(2*np.pi)*parameters_YbKGW["sigma_gauss_pump"])*np.exp((-(parameters_YbKGW["sigmas_pump"][:,0]-parameters_YbKGW["lambda_0_pump"])**2)/(2*parameters_YbKGW["sigma_gauss_pump"]**2))
     parameters_YbKGW["spectral_pump_fluence"] = parameters_YbKGW["norm_spectral_amplitude_pump"]*parameters_YbKGW["pump_fluence"]*parameters_YbKGW["delta_lambda_pump"]
-    parameters_YbKGW["crysyal_mixing_ratios"] = [5,0,2.27272727]
-    parameters_YbKGW["crysyal_mixing_ratios"] = RA.normalize_mixing(parameters_YbKGW["crysyal_mixing_ratios"])
 
     #Parameters for input pulse
     parameters_seed = {}
     parameters_seed["sigmas_seed"] = sigmas_seed
     parameters_seed["seed_pulse_duration"] = 1e-12 #used for inversion correction
-    parameters_seed["number_single_passes"] = 22
+    parameters_seed["max_number_single_passes"] = 100
     parameters_seed["N_seed_slices"] = 20
     parameters_seed["radius_laser_and_pump_mode"] = parameters_YbKGW["radius_laser_and_pump_mode"]
     parameters_seed["seed_energy"] = 50e-9#12e-9#based on minimum from flint 4.012e-9 #12 nJ
@@ -207,29 +182,31 @@ def main():
     parameters_seed["sigma_gauss"] = parameters_seed["fwhm_gauss"]/2.35
     parameters_seed["lambda_0"] = 1035e-9 # 1023 nm
     parameters_seed["delta_lambda_seed"] = parameters_seed["sigmas_seed"][2,0]-parameters_seed["sigmas_seed"][1,0]
-    #parameters_seed["norm_spectral_amplitude"] = 1/(np.sqrt(2*np.pi)*parameters_seed["sigma_gauss"])*flintData_normalized[:,1]
+   # parameters_seed["norm_spectral_amplitude"] = 1/(np.sqrt(2*np.pi)*parameters_seed["sigma_gauss"])*flintData_normalized[:,1]
     parameters_seed["norm_spectral_amplitude"] = 1/(np.sqrt(2*np.pi)*parameters_seed["sigma_gauss"])*intensity/np.max(intensity)
 
 
     parameters_seed["J_pulse_in"] = parameters_seed["norm_spectral_amplitude"]*parameters_seed["F_seed"]*parameters_seed["delta_lambda_seed"]
     parameters_seed["J_pulse_in_normalized"] = parameters_seed["J_pulse_in"]/np.max(parameters_seed["J_pulse_in"])
 
-    notch = RA.generate_gaussian_notch(parameters_seed["sigmas_seed"][:,0], 1024.93939e-9, .0, 3.23076923e-9)
+    #notch = RA_Notch.generate_gaussian_notch(parameters_seed["sigmas_seed"][:,0], 1024.36e-9, .08, 4e-9)
+    #notch = RA_Notch.generate_gaussian_notch(parameters_seed["sigmas_seed"][:,0], 1024.3e-9, .12, 3.95e-9) #pretty decent!
+    notch = RA_Notch.generate_gaussian_notch(parameters_seed["sigmas_seed"][:,0], 1024.93939e-9, .0, 3.23076923e-9)
 
-    J_pulse_out_carbide, E_pulse_energy_carbide, p_inv_out_seed_carbide, p_inv_out_pump_carbide, number_passes, saturation_condition = RA.run_simulation(parameters_YbKGW, parameters_seed, sigmas_pump, sigmas_seed,notch)
-    
+    J_pulse_out_carbide, E_pulse_energy_carbide, p_inv_out_seed_carbide, p_inv_out_pump_carbide, number_passes, saturation_condition = RA_Notch.run_simulation(parameters_YbKGW, parameters_seed, sigmas_pump, sigmas_seed,notch)
+
+    parameters_seed["norm_spectral_amplitude"] = 1/(np.sqrt(2*np.pi)*parameters_seed["sigma_gauss"])*intensity/np.max(intensity2)
+    J_pulse_out_carbide2, E_pulse_energy_carbide2, p_inv_out_seed_carbide2, p_inv_out_pump_carbide2, number_passes2, saturation_condition2 = RA_Notch.run_simulation(parameters_YbKGW, parameters_seed, sigmas_pump, sigmas_seed,notch)
+
+    """
     plt.plot(E_pulse_energy_carbide[0:number_passes]*1000)
-    #plt.yscale("log")
+    plt.yscale("log")
     plt.xlabel("number round trips")
     plt.ylabel("Energy (mJ)")
     plt.show()
     plt.plot(sigmas_seed[:,0]*1e9,J_pulse_out_carbide[:,number_passes-1]*(np.pi*parameters_YbKGW["radius_laser_and_pump_mode"]**2)*1e3)
     plt.xlabel("wavelength (nm)")
     plt.ylabel("Energy (mJ)")
-    plt.show()
-    plt.plot(sigmas_seed[:,0]*1e9,J_pulse_out_carbide[:,number_passes-1]/np.max(J_pulse_out_carbide[:,number_passes-1]),color="red")
-    plt.xlabel("wavelength (nm)",fontsize=14)
-    plt.ylabel("Spectrum", fontsize=14)
     plt.show()
     plt.plot(sigmas_seed[:,0]*1e9,J_pulse_out_carbide[:,number_passes-1]/np.max(J_pulse_out_carbide[:,number_passes-1]),label="output")
     plt.plot(sigmas_seed[:,0]*1e9,parameters_seed["J_pulse_in_normalized"],label="input")
@@ -241,11 +218,11 @@ def main():
     print(sigmas_seed[ind,0]*1e9,)
 
     print(saturation_condition)
-    
+    """
 
 
 
-    carbideData = import_spectra_data_csv("/Users/jackhirschman/Documents/Stanford/PhD_Project/S2E_PhotoinjectorLaserModel/Data/carbideSpectrum05142021.csv", skip_header = 6)
+    carbideData = import_spectra_data_csv("../Data/carbideSpectrum05142021.csv", skip_header = 6)
 
     carbide_resampled = np.zeros(sigmas_seed.shape)
     carbide_resampled[:,0] = wavelength_seed
@@ -254,16 +231,11 @@ def main():
 
     carbideData_normalized = carbide_resampled
     carbideData_normalized[:,1] = carbide_resampled[:,1]/np.max(carbide_resampled[:,1])
-    
-    plt.figure()
-    plt.plot(carbideData_normalized[:,0]*1e9,carbideData_normalized[:,1],label="True Output")
-    plt.plot(sigmas_seed[:,0]*1e9,J_pulse_out_carbide[:,number_passes-1]/np.max(J_pulse_out_carbide[:,number_passes-1]),label="Simulated Output")
-    plt.plot(sigmas_seed[:,0]*1e9,parameters_seed["J_pulse_in_normalized"],label="Oscillator")
-    plt.xlabel("wavelength")
-    plt.ylabel("Normalized Intensity")
-    plt.legend()
+    """
+    plt.plot(carbideData_normalized[:,0]*1e9,carbideData_normalized[:,1])
+    plt.plot(sigmas_seed[:,0]*1e9,J_pulse_out_carbide[:,number_passes-1]/np.max(J_pulse_out_carbide[:,number_passes-1]),label="output")
     plt.show()
-    
+    """
 
     #carbide_output_resampled = np.zeros(wavelength_r.shape)
     carbide_out_temp = np.zeros(J_pulse_out_carbide.shape[0]+2)
@@ -311,12 +283,27 @@ def main():
     carbide_freq_domain_output = freq_inten_new*np.exp(-1j*np.arctan2(np.imag(E_field_output_ft),np.real(E_field_output_ft)))
     carbide_td_output = np.fft.ifft(carbide_freq_domain_output)
 
+    intensity_freq_direct2 = J_pulse_out_carbide2[:,number_passes-1]*(np.pi*parameters_YbKGW["radius_laser_and_pump_mode"]**2)*sigmas_seed[:,0]**2/(2*np.pi*parameters_YbKGW["c"])
+    temp_freq_vec2 = parameters_YbKGW["c"]/sigmas_seed[:,0]
+    intensity_freq_direct_alt2 = np.concatenate((np.array([intensity_freq_direct2[0]/10]),intensity_freq_direct2,np.array([intensity_freq_direct2[-1]/10])))
+    temp_freq_vec_alt2 = np.concatenate((np.array([np.min(freq_vector)]), temp_freq_vec,np.array([np.max(freq_vector)])))
+    freq_interp_alt2 = interp1d(temp_freq_vec_alt2,intensity_freq_direct_alt2)
+    freq_inten_new2 = freq_interp_alt(freq_vector)
+
+    #plt.plot(freq_vector[1500:1700],np.abs(E_field_output_ft[1500:1700])**2/np.max(np.abs(E_field_output_ft[1500:1700])**2))
+    #plt.plot(freq_vector[1500:1700],freq_inten_new[1500:1700]/np.max(freq_inten_new[1500:1700]))
+    #plt.show()
+
+    carbide_freq_domain_output2 = freq_inten_new2*np.exp(-1j*np.arctan2(np.imag(E_field_output_ft2),np.real(E_field_output_ft2)))
+    carbide_td_output2 = np.fft.ifft(carbide_freq_domain_output2)
+
 
     added_carbide_phase_1 = 0
     added_carbide_phase_2 = 0
     added_carbide_phase_3 = 0
     added_carbide_phase_4= 0
     carbide_td_output_adjusted = carbide_td_output*np.exp(-1j*(added_carbide_phase_2*time_vector**2+added_carbide_phase_3*time_vector**3+added_carbide_phase_4*time_vector**4))
+    carbide_td_output_adjusted2 = carbide_td_output2*np.exp(-1j*(added_carbide_phase_2*time_vector**2+added_carbide_phase_3*time_vector**3+added_carbide_phase_4*time_vector**4))
 
 
 
@@ -324,15 +311,16 @@ def main():
 
     #sfg_input = {"E_field":carbide_td_output_adjusted,"time_vector":time_vector,"phase_td":np.arctan2(np.imag(carbide_td_output_adjusted),np.real(carbide_td_output_adjusted)), "frequency_vector":freq_vector,"frequency_spectrum":np.abs(carbide_freq_domain_output)**2, "wavelength_vector":wavelength_r}
     sfg_input = {"E_field":carbide_td_output_adjusted/np.max(carbide_td_output_adjusted),"time_vector":time_vector, "frequency_vector":freq_vector,'central_frequency': 299792458/(1024e-9)}
+    sfg_input2 = {"E_field":carbide_td_output_adjusted2/np.max(carbide_td_output_adjusted2),"time_vector":time_vector, "frequency_vector":freq_vector,'central_frequency': 299792458/(1024e-9)}
 
 
     #call modified version of SFG code
     u = pyssnl.UNITS()
     ssnl_Obj = pyssnl.SSNL(sfg_input) #ssnl_amy.SSNL(input_pk, spec_phase_1, spec_phase_2) ,1.05*-0.1,-0.5*2.2
-    ssnl_Obj.set_default() #the last two inputs are for the 2nd and 3rd order spectral phases
-    #ssnl_Obj.set_default(specphase_2nd_order = 0, specphase_3rd_order=0) #the last two inputs are for the 2nd and 3rd order spectral phases
+    #ssnl_Obj.set_default() #the last two inputs are for the 2nd and 3rd order spectral phases
+    ssnl_Obj.set_default(specphase_2nd_order = 2.561, specphase_3rd_order=.28) #the last two inputs are for the 2nd and 3rd order spectral phases
     #defaults from randy
-    #ssnl_Obj.set_default(specphase_2nd_order = 2.561, specphase_3rd_order=.28) #the last two inputs are for the 2nd and 3rd order spectral phases
+    ssnl_Obj.set_default(specphase_2nd_order = 2.561, specphase_3rd_order=.28) #the last two inputs are for the 2nd and 3rd order spectral phases
     ssnl_Obj.genEqns()
     ssnl_Obj.genGrids()
     ssnl_Obj.genFields(threshold=1e-5)
@@ -453,7 +441,7 @@ def main():
     plt.ylabel('Normalized Intensity')
     plt.legend()
     #plt.ylim([-.1,2])
-    plt.xlim([-20,20])
+    plt.xlim([-5,5])
 
     """
     plt.figure()
@@ -504,6 +492,222 @@ def main():
     #plt.xlabel('Wavelength (m)')
     #plt.ylabel('Intensity')
     #plt.legend()
+
+    plt.show()
+
+    #call modified version of SFG code
+    u = pyssnl.UNITS()
+    ssnl_Obj2 = pyssnl.SSNL(sfg_input2) #ssnl_amy.SSNL(input_pk, spec_phase_1, spec_phase_2) ,1.05*-0.1,-0.5*2.2
+    #ssnl_Obj.set_default() #the last two inputs are for the 2nd and 3rd order spectral phases
+    ssnl_Obj2.set_default(specphase_2nd_order = 2.561, specphase_3rd_order=.28) #the last two inputs are for the 2nd and 3rd order spectral phases
+    #defaults from randy
+    ssnl_Obj2.set_default(specphase_2nd_order = 2.561, specphase_3rd_order=.28) #the last two inputs are for the 2nd and 3rd order spectral phases
+    ssnl_Obj2.genEqns()
+    ssnl_Obj2.genGrids()
+    ssnl_Obj2.genFields(threshold=1e-5)
+    ssnl_Obj2.propagate()
+    ssnl_Obj2.saveFile('desired_file_name_for_saved peak')
+
+    #make plotting function #######################################################################################
+    E_field_dazzler_fd2 = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sfg_input2['E_field'])))
+    E_field_dazzler_fd_22 = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sfg_input2['E_field'])))
+
+    #xvals
+        #TIME DOMAIN
+    t_long_dazzler2 = np.array(sfg_input2['time_vector'])/u.ps
+    t_short_dazzler2 = ssnl_Obj.lists['t']/u.ps
+
+        #FREQUENCY DOMAIN
+    f_long_dazzler2 = np.array(sfg_input2['frequency_vector'])
+    f_short_dazzler2 = ssnl_Obj2.lists['dOmega']/(2*np.pi)
+
+    #comparison_plot(E_field_original_fd,f_short_original, E_field_dazzler_fd ,np.fft.fftshift( f_long_dazzler), 'Frequency', 'Comparing Frequency Space SFG and Dazzler peaks')
+
+    #plt.figure()
+    #plt.plot(sfg_input['time_vector'],sfg_input['E_field'], label = 'Dazzler peak input')
+    #plt.xlabel('Time (s)')
+    #plt.ylabel('Intensity Envelope')
+    #plt.legend()
+
+    #plt.figure()
+    #plt.plot(f_short_original, E_field_original_fd, label = 'SFG Self-Constructed Peak (E = 17 uJ)')
+    #plt.plot(np.fft.fftshift(f_long_dazzler),E_field_dazzler_fd, label = 'Dazzler peak input (E = 17 uJ)')
+    #plt.xlabel('Frequency (1/s)')
+    #plt.ylabel(' Envelope')
+    #plt.legend()
+
+
+    #plt.figure()
+    #plt.plot(f_short_original, E_field_original_fd/max(E_field_original_fd), label = 'SFG Self-Constructed Peak (E = 17 uJ)')
+    #plt.plot(np.fft.fftshift(f_long_dazzler),E_field_dazzler_fd/max(E_field_dazzler_fd), label = 'Dazzler peak input (E = 17 uJ)')
+    #plt.xlabel('Frequency (1/s)')
+    #plt.ylabel(' Envelope')
+    #plt.title('Pre-downsampling')
+    #plt.legend()
+
+    #shaping
+
+    ##different efields ######################################################
+
+        #INPUT
+
+    #input_original_td = a.before['time_input']
+    input_dazzler_td2 = sfg_input2['E_field']
+
+        #FOURIER TRANSFORM TO FREQUENCY SPACE
+
+    #input_original_fd = np.fft.fftshift(np.fft.fft(np.fft.fftshift(a.before['time_input'])))
+    input_dazzler_fd2 = np.fft.fftshift(np.fft.fft(np.fft.fftshift(np.sqrt(np.abs(np.array(sfg_input2['E_field']))**2))))
+
+    efield_td2 = np.sqrt(np.abs(np.array(sfg_input2['E_field']))**2)
+
+        #Just different way of finding the above two
+    #input_original_fd_2 = a.before['frequency_input']
+    #input_dazzler_fd_2 = ssnl_Obj.before['frequency_input']
+        #DOWNSAMPLE
+    #dazzler_fd_downsample = ssnl_Obj.before['down_sample_fd']
+
+        #SHAPE in FREQUENCY DOMAIN
+
+    dazzler_fd_shaped2 = ssnl_Obj2.eField['freq'][1][0,:]
+
+        #SHAPE IN TIME DOMAIN
+
+    dazzler_td_shaped2 = ssnl_Obj2.eField['time'][1][0,:]
+
+    ## DIFFERENT PHASES #######################################################################
+
+    #input_original_phase_td = np.unwrap(np.angle(input_original_td))
+    input_dazzler_phase_td2 = np.unwrap(np.angle(input_dazzler_td2))
+
+    #phase_original_fd = np.unwrap(np.angle(input_original_fd))
+    phase_dazzler_fd2 = np.unwrap(np.angle(input_dazzler_fd2))
+
+    #phase_original_fd_2 = np.unwrap(np.angle(input_original_fd_2 ))
+    #phase_dazzler_fd_downsample = np.unwrap(np.angle(dazzler_fd_downsample))
+
+
+    #plt.figure()
+    #plt.plot(t_short_dazzler,abs(ssnl_Obj.eField['time'][1][0,:])**2, color = 'b')
+    #plt.plot(t_short_dazzler,abs(ssnl_Obj.eField['time'][2][0,:])**2, color = 'r')
+    #plt.title('Dazzler:  Intensity of Chirped Inputs E field')
+    #plt.xlabel('Time (ps)')
+    #plt.ylabel('Intensity')
+
+    normalizing_const2 = max(max(ssnl_Obj2.eField['time'][2][0,:]**2), max(ssnl_Obj2.eField['time'][1][0,:])**2)
+    normal_d_chirp_12 = abs(ssnl_Obj2.eField['time'][1][0,:])**2/normalizing_const2
+
+
+    normal_d_chirp_22 = abs(ssnl_Obj2.eField['time'][2][0,:])**2/normalizing_const2
+    normalizing_const2 = max(max(ssnl_Obj2.eField['time'][2][0,:]**2), max(ssnl_Obj2.eField['time'][1][0,:])**2)
+
+    #plt.figure()
+    #plt.plot(t_short_dazzler, normal_d_chirp_1 , color = 'b')
+    #plt.plot(t_short_dazzler, normal_d_chirp_2 , color = 'r')
+    #plt.xlabel('Time (ps)')
+    #plt.ylabel('Normalized Intensity')
+
+
+    #plt.figure()
+    #plt.plot(t_short_dazzler, ssnl_Obj.eField['time'][1][0,:]/ max(max(ssnl_Obj.eField['time'][1][0,:]),max(ssnl_Obj.eField['time'][2][0,:] )) , color = 'b')
+    #plt.plot(t_short_dazzler, ssnl_Obj.eField['time'][2][0,:]/ max(max(ssnl_Obj.eField['time'][2][0,:]),max(ssnl_Obj.eField['time'][1][0,:])) , color = 'r')
+    #plt.xlabel('Time (ps)')
+    #plt.ylabel('Normalized Intensity')
+
+
+
+
+
+
+    wavelength_vector2, I_wavelength2, Phase_wavelength2 = convert_to_wavelength(abs(ssnl_Obj2.eField['freq'][3][-1])**2, np.angle(ssnl_Obj2.eField['freq'][3][-1]),ssnl_Obj2.lists['omega'][2]/(2*np.pi), ssnl_Obj2.lists['lambda'][2])
+
+    plt.figure()
+    plt.plot(wavelength_vector2, I_wavelength2, label = 'Intensity', color = 'b')
+    plt.xlabel('Wavelength (m)')
+    plt.ylabel('Intensity')
+    plt.xlim([510e-9,515e-9])
+    plt.legend()
+
+
+
+    c = 299792458
+    lambda_list2 = c/(sfg_input2['frequency_vector']+0.00001)
+    wavelength_vector2, I_wavelength2, Phase_wavelength2 = convert_to_wavelength(abs(np.fft.fftshift(np.fft.fft(np.fft.fftshift(sfg_input2['E_field']))))**2, np.angle(np.fft.fftshift(np.fft.fft(np.fft.fftshift(sfg_input2['E_field'])))),np.fft.fftshift(sfg_input2['frequency_vector']))
+
+    #plt.figure()
+    #plt.plot(wavelength_vector, I_wavelength/max(I_wavelength), label = 'Intensity', color = 'b')
+    #plt.xlabel('Wavelength (m)')
+    #plt.ylabel('Intensity')
+    #plt.legend()
+
+    SMALL_SIZE = 8
+    MEDIUM_SIZE = 10
+    BIGGER_SIZE = 12
+
+
+    fig, ax1 = plt.subplots(figsize=(8,6))
+    ax1.tick_params(axis='both', which='major', labelsize=16)
+    ax1.plot(t_short_dazzler, abs(ssnl_Obj.eField['time'][3][-1])**2/max(abs(ssnl_Obj.eField['time'][3][-1])**2), label = 'SFG Output', color = 'red')
+    ax1.plot(t_short_dazzler, abs(ssnl_Obj2.eField['time'][3][-1])**2/max(abs(ssnl_Obj2.eField['time'][3][-1])**2), label = 'SFG Output 2', color = 'blue')
+    ax1.set_xlabel('Time (ps)',fontsize = 16)
+    ax1.set_ylabel('Normalized Intensity',fontsize = 16)
+    #plt.legend()
+    #plt.ylim([-.1,2])
+    ax1.set_xlim([-5,5])
+
+    plt.figure()
+    plt.plot(t_long_dazzler, abs(input_dazzler_td)**2/max(abs(input_dazzler_td)**2), label = 'SFG Input', color = 'blue')
+    plt.plot(t_long_dazzler, abs(input_dazzler_td2)**2/max(abs(input_dazzler_td2)**2), label = 'SFG Input 2', color = 'red')
+    plt.xlabel('Time (ps)')
+    plt.ylabel('Normalized Intensity')
+    plt.legend()
+    #plt.ylim([-.1,2])
+    plt.xlim([-5,5])
+
+
+    wavelength2, intensity2, phase2 = trial.convert_to_wavelength(np.abs(E_field_output_ft2)**2, np.unwrap(-1*np.arctan2(np.imag(E_field_output_ft2), np.real(E_field_output_ft2))),freq_vector2,[1010e-9,1047e-9])
+    phase_temp1 = (phase + np.pi) % (2 * np.pi) - np.pi
+    phase_temp2 = (phase2 + np.pi) % (2 * np.pi) - np.pi
+    fig, ax1 = plt.subplots(figsize=(8,6))
+    ax1.tick_params(axis='both', which='major', labelsize=16)
+
+    ax1.plot(wavelength2*1e9, intensity2/np.max(intensity2), label = 'Shaped Dazzler Intensity', color = 'blue')
+    ax1.plot(wavelength*1e9, intensity/np.max(intensity), label = 'Unshaped Dazzler Intensity', color = 'red')
+    ax1.set_xlabel('wavelength (nm)',fontsize = 16)
+    ax1.set_ylabel('Normalized Intensity',fontsize = 16)
+    ax2 = ax1.twinx()
+    ax2.tick_params(axis='both', which='major', labelsize=16)
+    ax2.set_ylabel("Spectral Phase",fontsize = 16)
+    ax2.plot(wavelength2*1e9, np.unwrap(phase2),label = 'Shaped Dazzler Phase', color = 'blue',linestyle='dashed')
+    ax2.plot(wavelength*1e9, np.unwrap(phase_temp1),label = 'Unshaped Dazzler Phase', color = 'red',linestyle='dashed')
+    fig.tight_layout()
+
+    fig, ax1 = plt.subplots()
+    ax1.plot(freq_vector2, np.abs(E_field_output_ft2)**2, label = 'Shaped Dazzler Intensity', color = 'blue')
+    ax1.plot(freq_vector, np.abs(E_field_output_ft)**2, label = 'Unshaped Dazzler Intensity', color = 'red')
+    ax1.set_xlabel('wavelength (nm)')
+    ax1.set_ylabel('Normalized Intensity')
+    ax2 = ax1.twinx()
+    ax2.set_label("Spectral Phase")
+    #ax2.plot(freq_vector2, np.unwrap(-1*np.arctan2(np.imag(E_field_output_ft2))),label = 'Shaped Dazzler Phase', color = 'blue',linestyle='dashed')
+    #ax2.plot(freq_vector, np.unwrap(-1*np.arctan2(np.imag(E_field_output_ft))),label = 'Unshaped Dazzler Phase', color = 'red',linestyle='dashed')
+    fig.tight_layout()
+
+    fig.legend()
+
+    fig, ax1 = plt.subplots()
+    ax1.plot(time_vector2, np.abs(E_field_output2)**2/np.max(np.abs(E_field_output2)**2), label = 'Shaped Dazzler Intensity', color = 'blue')
+    ax1.plot(time_vector, np.abs(E_field_output)**2/np.max(np.abs(E_field_output)**2), label = 'Unshaped Dazzler Intensity', color = 'red')
+    ax1.set_xlabel('time (s)')
+    ax1.set_ylabel('Normalized Intensity')
+    ax2 = ax1.twinx()
+    ax2.set_label("Phase")
+    #ax2.plot(time_vector2, np.unwrap(-1*np.arctan2(np.imag(E_field_output2))),label = 'Shaped Dazzler Phase', color = 'blue',linestyle='dashed')
+    #ax2.plot(time_vector, np.unwrap(-1*np.arctan2(np.imag(E_field_output))),label = 'Unshaped Dazzler Phase', color = 'red',linestyle='dashed')
+    fig.tight_layout()
+
+    fig.legend()
+
 
     plt.show()
 

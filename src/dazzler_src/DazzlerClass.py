@@ -143,7 +143,8 @@ class Dazzler_Pulse_Shaper():
             
         #calculate S
         S_full = A_dial*np.exp(1j*phi_dial) + a_saved*np.exp(1j*phi_saved)*S_saved
-        
+        plt.plot(S_full)
+        plt.show()
         
         if (components_return):
             return f,g,A_dial,phi_dial, S_full
@@ -170,17 +171,26 @@ class Dazzler_Pulse_Shaper():
         #with more time, I would make the "displacement" line more intelligent
         
     def shape_input_pulse(self, E_field_input, time_vector, wavelength_vec_limits=None,
-                          phi_saved=0, a_saved=0, components_return=False):
+                          phi_saved=0, a_saved=0, components_return=False, E_field_input_freq_domain=False):
         '''
         This function takes the input electric field, time vector, and sampling rate and calls
         on other functions in the class in order to calculate output electric field
         '''
         sampling_rate=1/(time_vector[1]-time_vector[0])
+        print("LLLLLLLLLLLLLLLDFDFDFDFDFDF")
         if wavelength_vec_limits==None:
             wavelength_vec_limits=[self.position-200e-9, self.position+200e-9]
             
         #take FT of input electric field
-        E_field_input_ft = np.fft.fft(E_field_input)
+        if (E_field_input_freq_domain==False):
+            E_field_input_ft = np.fft.fft(E_field_input)
+            plt.plot(np.abs(E_field_input)**2)
+            plt.show()
+            plt.plot(np.unwrap(np.arctan2(np.imag(E_field_input),np.real(E_field_input))))
+            plt.show()
+            print("Finished plotting these")
+        else:
+            E_field_input_ft = E_field_input
         
         #get frequency vector and angular frequency vector based on sampling rate
         freq_vector = np.fft.fftfreq(n=(E_field_input_ft.size), d=1/sampling_rate)
@@ -191,10 +201,15 @@ class Dazzler_Pulse_Shaper():
         if (components_return):
             f,g,A_dial,phi_dial, S_full = self.calculate_full_transfer_function(ang_freq_vector, phi_saved, a_saved, components_return)
             components_dict = {"f":f,"g":g,"A_dial":A_dial,"phi_dial":phi_dial,"S_full":S_full}
+            plt.plot(S_full)
+            plt.show()
+            print("HERERERE")
 
         else :
             S_full = self.calculate_full_transfer_function(ang_freq_vector, phi_saved, a_saved, components_return)
             components_dict = {"S_full":S_full}
+            plt.plot(S_full)
+            plt.show()
             
         if (wavelength_vec_limits[0]<self.c/max(np.abs(freq_vector))) or (wavelength_vec_limits[1]>self.c/freq_vector[1]):
             print("Your sampling rate is not sufficient for accurate information in the frequency domain. We will recreate the input field in the frequency domain to avoid the first Fourier transform. The frequency vector will not take the typical form; some fftshifts may no longer be needed.")
@@ -204,8 +219,12 @@ class Dazzler_Pulse_Shaper():
         E_field_output_ft = E_field_input_ft*S_full
                 
         #calculate IFT of output field
-        E_field_output = np.fft.ifft(E_field_output_ft)
-        
+        #E_field_output = np.fft.ifft(E_field_output_ft)
+        S_full_time = np.fft.ifft(S_full)
+        E_field_output=np.convolve(np.fft.fftshift(S_full_time),E_field_input,'same')
+        tolerance = 1e-14
+        E_field_output.real[abs(E_field_output.real) <tolerance] = 0.0
+        E_field_output.imag[abs(E_field_output.imag) <tolerance] = 0.0
         
         return E_field_input, E_field_input_ft, E_field_output, E_field_output_ft,time_vector, freq_vector, components_dict
     
